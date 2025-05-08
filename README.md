@@ -68,6 +68,7 @@ flowchart LR
 ```
 
 ### Context Structure Example
+For diff review (target and source branches in git)
 ```json
 {
   "file": "src/main.py",
@@ -87,6 +88,26 @@ flowchart LR
 }
 ```
 
+For single file review (file command)
+```json
+{
+  "file": "src/main.py",
+  "language": "python",
+  "review_type": "file",
+  "full_content": "def process_data():\n    data = fetch_data()\n    return transform(data)\n\ndef transform(data):\n    return data.upper()"
+}
+```
+
+For directory review (dir command). One request per file
+```json
+{
+  "file": "src/main.py",
+  "language": "python",
+  "review_type": "directory",
+  "full_content": "def process_data():\n    data = fetch_data()\n    return transform(data)"
+}
+```
+
 ----------
 
 ## 4 Execution Flow
@@ -95,20 +116,22 @@ flowchart LR
     
 2. **Target resolution**
     
-   - `diff <base>..<head>`  → list of modified files & line spans.
+   - `diff <target>..<source>`  → list of modified files & line spans. if source is not provided use HEAD
         
-   - `file`  /  `dir`  /  `full`  → enumerate files recursively (globs honoured).
+   - `file`  /  `dir`  → enumerate files recursively (globs honoured). `file` - single file review. `dir` - cascading directory review.
         
-3. **Deterministic scan**  – Regex & heuristic rules applied to each candidate line/block.
+3. **Context Building**  – For each changed file:
+   - Collect full file content
+   - Build structured diff with before/after changes
+   - Prepare context for LLM analysis
     
-4. **LLM scan**  – Batches of unresolved snippets sent to model (≤ 15 s request timeout).
+4. **LLM Analysis**  – Process files in batches with full context (≤ 15 s request timeout).
     
 5. **Finding merge**  – Duplicate suppression, severity assignment (`info|warning|error`).
     
 6. **Report write**  –  `findings.json`  saved to  `--out`  (default  `./code_review_findings.json`).
     
 7. **Exit**  – Always  `exit 0`  in v1 (no CI semantics).
-    
 
 ----------
 
@@ -116,7 +139,7 @@ flowchart LR
 
 | Package | Core Classes / Functions | Notes |
 |--------|------|----------|
-| `codereview.cli` | `app`  (Typer instance), sub-commands (`diff`,  `file`,  `dir`,  `full`) | Thin layer; no business logic. |
+| `codereview.cli` | `app`  (Typer instance), sub-commands (`diff`,  `file`,  `dir`) | Thin layer; no business logic. |
 | `codereview.collector` | `GitDiff`,  `DirectoryScanner`,  `FileLoader` | Uses  _GitPython_  or subprocess for diffs. |
 | `codereview.rules` | `Rule`,  `RuleSet`,  `RuleRegistry`, utilities for regex / simple DSL evaluation | Loads user-authored YAML; validates schema. |
 | `codereview.llm` | `BaseBackend`,  `OpenAIBackend`,  `ClaudeBackend`,  `GeminiBackend`,  `LocalBackend`,  `BackendFactory` | Uniform async  `.review(prompt)->FindingsJSON`. |
@@ -126,6 +149,7 @@ flowchart LR
 | `codereview.config` | `EnvLoader`,  `UserConfig` | Reads  `.env`, merges CLI overrides, holds time-out & cost settings. |
 
 ----------
+
 
 ## 6 Configuration Files
 
