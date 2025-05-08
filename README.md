@@ -49,18 +49,42 @@ Future versions can plug in richer language parsers without altering the public 
 ```mermaid
 flowchart LR
     A[CLI] --> B[File & Diff Collector]
-    B --> D[Prompt Builder]
+    B --> D[Context Builder]
     D --> E[LLM Back-end(OpenAI / Claude / Gemini / local)]
     E --> F[Finding Collector]
     F --> G[Reporter<br>(JSON writer)]
 
 1.  **Collector**  builds the work-set: changed lines, single files, directories or whole repo.
     
-2.  **Prompt Builder** packages code blocks into prompts for semantic analysis.
+2.  **Context Builder** structures the input as JSON with:
+    - Full file content
+    - Structured change metadata (line numbers, change types)
+    - File metadata (path, language)
+    - Related context (commit messages, affected files)
     
-3.  **LLM Back-end** performs deep semantic analysis of the code.
+3.  **LLM Back-end** performs semantic analysis with structured context.
     
 4.  **Reporter**  consolidates everything into  `findings.json`, including token usage and cost.
+```
+
+### Context Structure Example
+```json
+{
+  "file": "src/main.py",
+  "language": "python",
+  "changes": {
+    "type": "diff",
+    "hunks": [
+      {
+        "start_line": 45,
+        "end_line": 46,
+        "before": "def old_function():\n    return None",
+        "after": "def new_function():\n    return True"
+      }
+    ]
+  },
+  "full_content": "... entire file content ..."
+}
 ```
 
 ----------
