@@ -1,4 +1,3 @@
-
 # AI Code-Review Assistant  
 *Implementation Design Document — v1.0 (May 2025)*  
 
@@ -25,11 +24,10 @@
 ## 1  Overview
 The **AI Code-Review Assistant** is a Python-based command-line tool that scans any codebase (any language) and produces a structured JSON report of rule violations, augmented with Large-Language-Model (LLM) reasoning where deterministic matching is insufficient.
 
-*Version 1* emphasises **breadth** (works on “any text file”) over language-specific depth; it therefore avoids heavy grammar parsers such as *tree-sitter* and relies instead on:
+*Version 1* emphasises **breadth** (works on "any text file") over language-specific depth; it therefore avoids heavy grammar parsers such as *tree-sitter* and relies on:
 
-*  textual diff parsing,  
-*  regex / heuristic pattern rules, and  
-*  LLM prompts for stylistic or semantic feedback.
+*  textual diff parsing, and
+*  LLM prompts for semantic analysis.
 
 Future versions can plug in richer language parsers without altering the public API.
 
@@ -51,18 +49,16 @@ Future versions can plug in richer language parsers without altering the public 
 ```mermaid
 flowchart LR
     A[CLI] --> B[File & Diff Collector]
-    B --> C[Rule Engine(regex / simple heuristics)]
-    C -->|undecided hunks| D[Prompt Builder]
+    B --> D[Prompt Builder]
     D --> E[LLM Back-end(OpenAI / Claude / Gemini / local)]
-    C --> F[Finding Collector]
-    E --> F[LLM Backend → Finding Collector]
+    E --> F[Finding Collector]
     F --> G[Reporter<br>(JSON writer)]
 
 1.  **Collector**  builds the work-set: changed lines, single files, directories or whole repo.
     
-2.  **Rule Engine**  runs deterministic checks first (fast, offline).
+2.  **Prompt Builder** packages code blocks into prompts for semantic analysis.
     
-3.  Residual lines/blocks are packaged into prompts and sent to the chosen  **LLM back-end**.
+3.  **LLM Back-end** performs deep semantic analysis of the code.
     
 4.  **Reporter**  consolidates everything into  `findings.json`, including token usage and cost.
 ```
