@@ -50,9 +50,9 @@ Future versions can plug in richer language parsers without altering the public 
 flowchart LR
     A[CLI] --> B[File & Diff Collector]
     B --> D[Context Builder]
-    D --> E[LLM Back-end(OpenAI / Claude / Gemini / local)]
+    D --> E[LLM Back-end - OpenAI - Claude - Gemini - local]
     E --> F[Finding Collector]
-    F --> G[Reporter<br>(JSON writer)]
+    F --> G[Reporter<br>JSON writer]
 ```
 
 1.  **Collector**  builds the work-set: changed lines, single files, directories or whole repo.
@@ -390,7 +390,6 @@ class ProcessingMetrics:
 
 | Flag | Description |
 |--------|------|
-| `--config` | Override path to codereview.yaml (default: ./codereview.yaml) |
 | `--verbose` | Enable debug logging |
 
 ----------
