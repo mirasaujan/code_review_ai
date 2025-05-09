@@ -235,7 +235,7 @@ This structure allows for:
 
 ----------
 
-## 7 Data Models & Schemas
+## 7 Output Data Models & Schemas
 
 ```python
 `# findings.py  
@@ -246,12 +246,24 @@ class  Finding:
     rule_id: str 
     message: str 
     severity: Literal["info", "warning", "error"] 
-@dataclass  class  CostSummary:
+
+@dataclass
+class CostSummary:
     provider: str 
     model: str 
     tokens_prompt: int 
     tokens_completion: int 
-    cost_usd: float`
+    cost_usd: float
+    processing_time: float  # seconds
+
+@dataclass
+class ProcessingMetrics:
+    files_processed: int
+    total_time: float
+    avg_time_per_file: float
+    collection_time: float
+    context_build_time: float
+    llm_analysis_time: float`
 ``` 
 
 ### Output File (`findings.json`)
@@ -264,11 +276,20 @@ class  Finding:
     "mode": "diff",
     "base_ref": "main",
     "head_ref": "feature/xyz",
+    "metrics": {
+      "files_processed": 12,
+      "total_time": 45.2,
+      "avg_time_per_file": 3.8,
+      "collection_time": 0.5,
+      "context_build_time": 2.1,
+      "llm_analysis_time": 42.6
+    },
     "llm": {
       "provider": "openai",
       "model": "gpt-4o",
       "timeout_sec": 15,
-      "total_cost_usd": 0.0134
+      "total_cost_usd": 0.0134,
+      "processing_time": 15.2
     }
   },
   "findings": [
@@ -326,16 +347,15 @@ class  Finding:
 
 | Command | Example | Meaning |
 |--------|------|----------|
-| `diff` | `codereview diff main..HEAD` | Review only changed lines. |
-| `file` | `codereview file path/to/file.swift` | Single file. |
+| `diff` | `codereview diff main..source` | Review only changed lines. |
+| `file` | `codereview file path/to/file.py` | Single file. |
 | `dir` | `codereview dir Sources/` | All files recursively. |
-| `full` | `codereview full` | Whole repository. |
 
 ### Global flags
 
 | Flag | Default | Description |
 |--------|------|----------|
-| `--rules-path` | `rules/` | Root folder with YAML rules. |
+| `--rules-path` | `rules/` | Root folder with JSON rules. |
 | `--model` | `openai:gpt-4o` | `<provider>:<model_id>` |
 | `--timeout` | `15` | Seconds per LLM request. |
 | `--out` | `code_review_findings.json` | Output file. |
@@ -348,7 +368,7 @@ class  Finding:
     
 -   **Rule YAML parse error**: abort execution with clear message.
     
--   **LLM timeout**: mark affected snippet with  `"severity": "info", "message": "LLM timeout"`  (不会 abort).
+-   **LLM timeout**: mark affected snippet with  `"severity": "info", "message": "LLM timeout"`  (abort).
     
 -   **Unhandled**  exceptions bubble to CLI, shown with stack-trace (debug).
     
@@ -364,18 +384,6 @@ class  Finding:
 -   **Entry-point**:  `codereview = codereview.cli:app`.
     
 -   Distribution under  **MIT license**.
-    
-
-### Cross-project compatibility
-
-The script works on any repository—Swift, C#, Bash—because it treats files as opaque text.  
-For Swift projects in particular, add to  `Package.swift`  scripts section:
-
-```swift
-
-`// .swiftpm/xcode/scripts/run_code_review.sh 
-poetry run codereview diff main..source_branch  --out .build/code_review_findings.json` 
-```
 
 ----------
 
@@ -385,13 +393,26 @@ poetry run codereview diff main..source_branch  --out .build/code_review_finding
     
 -   Levels:  `INFO`  default,  `DEBUG`  via  `--verbose`.
     
--   Cost summary printed like:
+-   Metrics summary printed like:
     
 ```bash
-── LLM cost ─────────────────────────────
-provider/model        $USD    tokens
-openai/gpt-4o        0.0134   2 112
+── Review Summary ─────────────────────────────
+Files processed: 12
+Total time: 45.2s
+Average time per file: 3.8s
+
+── LLM Metrics ─────────────────────────────
+provider/model        $USD    tokens    time
+openai/gpt-4o        0.0134   2 112    15.2s
+anthropic/claude     0.0089   1 845    12.4s
+
+── File Processing ──────────────────────────
+File collection: 0.5s
+Context building: 2.1s
+LLM analysis: 42.6s
 ``` 
+
+All metrics are also saved in the output JSON for programmatic access.
 
 ----------
 
@@ -399,7 +420,6 @@ openai/gpt-4o        0.0134   2 112
 
 | Phase | Feature |
 |--------|------|
-| **v1.1** | SARIF / Markdown reporters; configurable exit codes. |
 | **v2.0** | Optional  _tree-sitter_  language packs for deep static rules. |
 | **v2.1** | GitHub / GitLab PR Check integration; annotate diffs. |
 | **v3.0** | IDE extensions (VS Code, Xcode source extensions). |
