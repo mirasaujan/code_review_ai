@@ -53,6 +53,7 @@ flowchart LR
     D --> E[LLM Back-end(OpenAI / Claude / Gemini / local)]
     E --> F[Finding Collector]
     F --> G[Reporter<br>(JSON writer)]
+```
 
 1.  **Collector**  builds the work-set: changed lines, single files, directories or whole repo.
     
@@ -65,7 +66,6 @@ flowchart LR
 3.  **LLM Back-end** performs semantic analysis with structured context.
     
 4.  **Reporter**  consolidates everything into  `findings.json`, including token usage and cost.
-```
 
 ### Context Structure Example
 For diff review (target and source branches in git)
@@ -115,14 +115,13 @@ For directory review (dir command). One request per file
 1. **Start-up**  – CLI parses flags, loads  `.env`, YAML rule mapping, and user RuleSets.
     
 2. **Target resolution**
-    
-   - `diff <target>..<source>`  → list of modified files & line spans. if source is not provided use HEAD
-        
-   - `file`  /  `dir`  → enumerate files recursively (globs honoured). `file` - single file review. `dir` - cascading directory review.
+   - `diff <target>..<source>` - list of modified files & line spans.
+   - `file` - single file review
+   - `dir` - enumerate files recursively within provided path (globs honoured). 
         
 3. **Context Building**  – For each changed file:
    - Collect full file content
-   - Build structured diff with before/after changes
+      - **If `diff`** Build structured diff with before/after changes
    - Prepare context for LLM analysis
     
 4. **LLM Analysis**  – Process files in batches with full context (≤ 15 s request timeout).
@@ -141,12 +140,12 @@ For directory review (dir command). One request per file
 |--------|------|----------|
 | `codereview.cli` | `app`  (Typer instance), sub-commands (`diff`,  `file`,  `dir`) | Thin layer; no business logic. |
 | `codereview.collector` | `GitDiff`,  `DirectoryScanner`,  `FileLoader` | Uses  _GitPython_  or subprocess for diffs. |
-| `codereview.rules` | `Rule`,  `RuleSet`,  `RuleRegistry`, utilities for regex / simple DSL evaluation | Loads user-authored YAML; validates schema. |
+| `codereview.rules` | `Rule`, `RuleSet`, `RuleSetMapper` | Manages rules, rule sets, and their path mappings. |
 | `codereview.llm` | `BaseBackend`,  `OpenAIBackend`,  `ClaudeBackend`,  `GeminiBackend`,  `LocalBackend`,  `BackendFactory` | Uniform async  `.review(prompt)->FindingsJSON`. |
-| `codereview.prompt` | `PromptBuilder` | Formats system & user messages, injects cost guardrails. |
+| `codereview.prompt` | `PromptBuilder` | Formats system & user messages |
 | `codereview.findings` | `Finding`,  `FindingCollector`, de-dup helpers | Frozen dataclass for immutability. |
-| `codereview.report` | `JSONWriter` | Emits final artefact & prints summary. |
-| `codereview.config` | `EnvLoader`,  `UserConfig` | Reads  `.env`, merges CLI overrides, holds time-out & cost settings. |
+| `codereview.report` | `JSONWriter` | Emits final artefact & prints summary (model used, time taken, cost to run). |
+| `codereview.config` | `EnvLoader`,  `UserConfig` | Reads  `.env`, merges CLI overrides, holds time-out. |
 
 ----------
 
@@ -163,38 +162,76 @@ LLAMA_SERVER_URL=http://localhost:11434`
 ```
 _Ignored by Git._  Users manage their own secrets.
 
-### 6.2  `rules/`  directory structure
+### 6.2  Rules Structure
 
 ```markdown
 rules/
- ├─ stdlib/
- │   ├─ prints.yaml
- │   └─ secrets.yaml
- └─ custom/
- └─ my_team_rules.yaml` 
- ```
-
-### 6.3 Sample YAML Schema
-
-```yaml
-`# rule file: prints.yaml  
-rules:
-  - id:  GEN-001  
-    name:  Avoid  debug  prints  
-    description:  "Debug prints should not be committed."  
-    pattern:  "\\bprint\\("  
-    severity:  warning  
-rule_sets:  
-  - name:  default  
-    includes:  -  "src/**"  
-    excludes:  -  "tests/**"  
-    rules:  -  GEN-001` 
+├─ rules/
+│   ├─ security/
+│   │   └─ secrets.json
+│   └─ style/
+│       └─ pep8.json
+├─ rulesets/
+│   ├─ style_guide.json
+│   └─ security.json
+└─ ruleset_mapping.json
 ```
 
-- End users may add more keys, but  `id`,  `pattern`,  `severity`  are mandatory.
-    
-- Patterns are treated as raw Python regex strings.
-    
+### 6.3 Rule Definition Example
+```json
+{
+  "id": "SEC-001",
+  "name": "No Hardcoded Secrets",
+  "description": "Check for potential secrets, API keys, or credentials in code",
+  "severity": "error",
+  "examples": {
+    "bad": ["API_KEY = 'sk_live_123'"],
+    "good": ["API_KEY = os.getenv('API_KEY')"]
+  }
+}
+```
+
+### 6.4 RuleSet Definition Example
+```json
+{
+  "id": "STYLE-001",
+  "name": "Python Style Guide",
+  "description": "Enforces PEP 8 and project-specific style guidelines",
+  "rules": [
+    "SEC-001",
+    "STYLE-001",
+    "STYLE-002"
+  ]
+}
+```
+
+### 6.5 RuleSet Mapping Example
+```json
+{
+  "mappings": [
+    {
+      "path": "src/**",
+      "rule_sets": ["STYLE-001", "SEC-001"]
+    },
+    {
+      "path": "tests/**",
+      "rule_sets": ["TEST-001"]
+    }
+  ]
+}
+```
+
+The rules system consists of three main components:
+1. **Rules**: Individual guidelines with examples of good and bad practices
+2. **RuleSets**: Groups of related rules with a common goal (e.g., style, security)
+3. **RuleSet Mapping**: Configuration that maps paths to applicable RuleSets
+
+This structure allows for:
+- Clear separation of concerns
+- Reusable rule sets across different paths
+- Easy addition of new rules and rule sets
+- Flexible path-based rule application
+- JSON are faster to parse than other formats
 
 ----------
 
