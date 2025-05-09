@@ -5,6 +5,7 @@ File loader for single file collection.
 import os
 from typing import Dict, Any
 from models import FileContent
+from ..utils.language_utils import get_language_from_extension
 
 class FileLoader:
     """Handles loading and parsing of single files with metadata."""
@@ -42,37 +43,10 @@ class FileLoader:
     def _get_metadata(self, file_path: str, content: str) -> Dict[str, Any]:
         """Extract metadata from file."""
         return {
-            'language': self._detect_language(file_path),
+            'language': self._get_language(file_path),
             'size': len(content.encode('utf-8'))
         }
         
-    def _detect_language(self, file_path: str) -> str:
-        """Detect programming language from file extension."""
-        ext = os.path.splitext(file_path)[1].lower()
-        lang_map = {
-            '.py': 'python',
-            '.js': 'javascript',
-            '.ts': 'typescript',
-            '.java': 'java',
-            '.cpp': 'cpp',
-            '.c': 'c',
-            '.h': 'c',
-            '.go': 'go',
-            '.rs': 'rust',
-            '.rb': 'ruby',
-            '.php': 'php',
-            '.swift': 'swift',
-            '.kt': 'kotlin',
-            '.scala': 'scala',
-            '.sh': 'shell',
-            '.bash': 'shell',
-            '.zsh': 'shell',
-            '.html': 'html',
-            '.css': 'css',
-            '.json': 'json',
-            '.yaml': 'yaml',
-            '.yml': 'yaml',
-            '.md': 'markdown',
-            '.txt': 'text'
-        }
-        return lang_map.get(ext, 'unknown') 
+    def _get_language(self, file_path: str) -> str:
+        """Get the programming language based on file extension."""
+        return get_language_from_extension(file_path) 
