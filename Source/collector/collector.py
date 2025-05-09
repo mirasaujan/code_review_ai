@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List
 from models import FileContent
 from git_diff import GitDiffCollector
+from file_loader import FileLoader
 
 class BaseCollector(ABC):
     @abstractmethod
@@ -23,4 +24,24 @@ class GitDiff(BaseCollector):
         Returns:
             List of JSON objects containing the changes
         """
-        return self._collector.collect(ref_spec) 
+        return self._collector.collect(ref_spec)
+
+class File(BaseCollector):
+    def __init__(self):
+        self._loader = FileLoader()
+        
+    def collect(self, file_path: str) -> FileContent:
+        """
+        Collect a single file for review.
+        
+        Args:
+            file_path: Path to the file to collect
+            
+        Returns:
+            FileContent object with file content and metadata
+            
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            PermissionError: If file can't be read
+        """
+        return self._loader.load(file_path) 

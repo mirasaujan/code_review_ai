@@ -8,6 +8,14 @@ class FileContent:
     content: str
     metadata: dict
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert file content to dictionary format."""
+        return {
+            "path": self.path,
+            "content": self.content,
+            "metadata": self.metadata
+        }
+
 @dataclass
 class DiffHunk:
     """Represents a chunk of changes in a file."""

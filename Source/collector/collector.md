@@ -15,7 +15,7 @@ The Collector component is responsible for building the work-set of files to be 
 - Defaults to HEAD if source branch is not provided
 - Prepares hunks for LLM analysis
 
-### FileLoader
+### File
 - Handles single file review scenarios
 - Reads file content
 - Ensures file is readable and accessible
@@ -40,8 +40,8 @@ changes = collector.collect("main..feature-branch")
 ### Single File Collection
 ```python
 # Example: Collect single file
-loader = FileLoader()
-file_content = loader.load("src/main.py")
+collector = File()
+file_content = collector.collect("src/main.py")
 ```
 
 ### Directory Collection
