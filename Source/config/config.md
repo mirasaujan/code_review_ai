@@ -22,9 +22,6 @@ LLAMA_SERVER_URL=http://localhost:11434
 The main configuration file `codereview.yaml` supports the following structure:
 
 ```yaml
-# Repository root configuration
-version: "1.0"
-
 # File collection patterns
 include:
   - "*.py"
