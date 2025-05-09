@@ -162,8 +162,44 @@ LLAMA_SERVER_URL=http://localhost:11434`
 ```
 _Ignored by Git._  Users manage their own secrets.
 
-### 6.2  Rules Structure
+### 6.2  Configuration Structure
 
+`codereview.yaml`
+```yaml
+# Repository root configuration
+version: "1.0"
+
+# File collection patterns
+include:
+  - "*.py"
+  - "*.js"
+  - "*.ts"
+  - "*.swift"
+exclude:
+  - "tests/*"
+  - "node_modules/*"
+  - "*.test.*"
+  - "build/*"
+  - "dist/*"
+
+# LLM configuration
+llm:
+  provider: "openai"  # openai, anthropic, google, local
+  model: "gpt-4o"     # provider-specific model
+  timeout_sec: 15     # per request timeout
+
+# Rules configuration
+rules:
+  path: "rules/"      # relative to repository root
+  mapping: "rules/ruleset_mapping.json"
+
+# Output configuration
+output:
+  file: "code_review_findings.json"
+  format: "json"      # future: sarif, markdown
+```
+
+### 6.3 Rule Definition Example
 ```markdown
 rules/
 ├─ rules/
@@ -177,7 +213,6 @@ rules/
 └─ ruleset_mapping.json
 ```
 
-### 6.3 Rule Definition Example
 ```json
 {
   "id": "SEC-001",
@@ -351,14 +386,12 @@ class ProcessingMetrics:
 | `file` | `codereview file path/to/file.py` | Single file. |
 | `dir` | `codereview dir Sources/` | All files recursively. |
 
-### Global flags
+### CLI Flags
 
-| Flag | Default | Description |
-|--------|------|----------|
-| `--rules-path` | `rules/` | Root folder with JSON rules. |
-| `--model` | `openai:gpt-4o` | `<provider>:<model_id>` |
-| `--timeout` | `15` | Seconds per LLM request. |
-| `--out` | `code_review_findings.json` | Output file. |
+| Flag | Description |
+|--------|------|
+| `--config` | Override path to codereview.yaml (default: ./codereview.yaml) |
+| `--verbose` | Enable debug logging |
 
 ----------
 
